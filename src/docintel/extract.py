@@ -32,15 +32,41 @@ from .schema import SCHEMAS, DocumentSchema, FieldType, parse_date, parse_money
 # --- classification ---------------------------------------------------------------
 
 CLASSIFIER_RULES: dict[str, list[str]] = {
-    "invoice": ["invoice", "bill to", "subtotal", "sales tax", "amount due",
-                "tax invoice", "purchase order"],
-    "contract": ["agreement", "hereinafter", "witnesseth", "governing law",
-                 "party of the first part", "in witness whereof", "this agreement"],
-    "cnic": ["national identity card", "nadra", "identity number", "father name",
-             "date of expiry", "pakistan"],
+    "invoice": [
+        "invoice",
+        "bill to",
+        "subtotal",
+        "sales tax",
+        "amount due",
+        "tax invoice",
+        "purchase order",
+    ],
+    "contract": [
+        "agreement",
+        "hereinafter",
+        "witnesseth",
+        "governing law",
+        "party of the first part",
+        "in witness whereof",
+        "this agreement",
+    ],
+    "cnic": [
+        "national identity card",
+        "nadra",
+        "identity number",
+        "father name",
+        "date of expiry",
+        "pakistan",
+    ],
     "receipt": ["receipt", "paid", "cash", "change due", "thank you for"],
-    "bank_statement": ["statement of account", "opening balance", "closing balance",
-                       "debit", "credit", "iban"],
+    "bank_statement": [
+        "statement of account",
+        "opening balance",
+        "closing balance",
+        "debit",
+        "credit",
+        "iban",
+    ],
 }
 
 
@@ -86,14 +112,22 @@ def classify(text: str, *, floor: float = 0.45, margin: float = 0.15) -> Classif
     runner_up_confidence = round(len(ranked[1][1]) / total, 4) if runner_up else 0.0
 
     if confidence < floor:
-        return Classification(None, confidence, best_hits, runner_up,
-                              reason=f"best match {best} scored only {confidence:.0%}")
+        return Classification(
+            None,
+            confidence,
+            best_hits,
+            runner_up,
+            reason=f"best match {best} scored only {confidence:.0%}",
+        )
 
     if runner_up and confidence - runner_up_confidence < margin:
         return Classification(
-            None, confidence, best_hits, runner_up,
+            None,
+            confidence,
+            best_hits,
+            runner_up,
             reason=f"ambiguous between {best} and {runner_up} "
-                   f"({confidence:.0%} vs {runner_up_confidence:.0%})",
+            f"({confidence:.0%} vs {runner_up_confidence:.0%})",
         )
 
     return Classification(best, confidence, best_hits, runner_up)
@@ -143,8 +177,9 @@ _IBAN = re.compile(r"\bPK\d{2}[A-Z]{4}\d{16}\b")
 FIELD_EXTRACTORS: dict[str, dict[str, list[Extractor]]] = {
     "invoice": {
         "invoice_number": [
-            labelled("invoice no", "invoice number", "invoice #", "bill no",
-                     pattern=r"[A-Z0-9\-/]{3,20}"),
+            labelled(
+                "invoice no", "invoice number", "invoice #", "bill no", pattern=r"[A-Z0-9\-/]{3,20}"
+            ),
         ],
         "invoice_date": [
             labelled("invoice date", "date of invoice", "dated", pattern=r"[\d/\-.]{8,10}"),
@@ -153,32 +188,43 @@ FIELD_EXTRACTORS: dict[str, dict[str, list[Extractor]]] = {
         "due_date": [labelled("due date", "payment due", pattern=r"[\d/\-.]{8,10}")],
         "vendor_name": [labelled("vendor", "from", "supplier", "sold by")],
         "vendor_ntn": [labelled("ntn", pattern=r"\d{7}(?:-\d)?"), by_pattern(_NTN)],
-        "vendor_strn": [labelled("strn", "sales tax reg", pattern=r"[\d\-]{15,20}"),
-                        by_pattern(_STRN)],
-        "subtotal": [labelled("subtotal", "sub total", "net amount",
-                              pattern=r"[\d,]+(?:\.\d{2})?")],
+        "vendor_strn": [
+            labelled("strn", "sales tax reg", pattern=r"[\d\-]{15,20}"),
+            by_pattern(_STRN),
+        ],
+        "subtotal": [
+            labelled("subtotal", "sub total", "net amount", pattern=r"[\d,]+(?:\.\d{2})?")
+        ],
         "tax": [labelled("sales tax", "gst", "tax", pattern=r"[\d,]+(?:\.\d{2})?")],
         "discount": [labelled("discount", pattern=r"[\d,]+(?:\.\d{2})?")],
-        "total": [labelled("grand total", "total amount", "amount due", "total",
-                           pattern=r"[\d,]+(?:\.\d{2})?")],
+        "total": [
+            labelled(
+                "grand total", "total amount", "amount due", "total", pattern=r"[\d,]+(?:\.\d{2})?"
+            )
+        ],
         "iban": [labelled("iban", pattern=r"PK\d{2}[A-Z]{4}\d{16}"), by_pattern(_IBAN)],
     },
     "cnic": {
         "name": [labelled("name", pattern=r"[A-Za-z .]{3,50}")],
-        "cnic_number": [labelled("identity number", "cnic", pattern=r"\d{5}-\d{7}-\d"),
-                        by_pattern(_CNIC)],
+        "cnic_number": [
+            labelled("identity number", "cnic", pattern=r"\d{5}-\d{7}-\d"),
+            by_pattern(_CNIC),
+        ],
         "date_of_birth": [labelled("date of birth", "dob", pattern=r"[\d/\-.]{8,10}")],
         "date_of_expiry": [labelled("date of expiry", "expiry", pattern=r"[\d/\-.]{8,10}")],
     },
     "contract": {
         "party_a": [labelled("between", "party a", "first party")],
         "party_b": [labelled("and", "party b", "second party")],
-        "effective_date": [labelled("effective date", "commencing", "with effect from",
-                                    pattern=r"[\d/\-.]{8,10}")],
-        "expiry_date": [labelled("expiry date", "terminates on", "until",
-                                 pattern=r"[\d/\-.]{8,10}")],
-        "value": [labelled("consideration", "contract value", "sum of",
-                           pattern=r"[\d,]+(?:\.\d{2})?")],
+        "effective_date": [
+            labelled("effective date", "commencing", "with effect from", pattern=r"[\d/\-.]{8,10}")
+        ],
+        "expiry_date": [
+            labelled("expiry date", "terminates on", "until", pattern=r"[\d/\-.]{8,10}")
+        ],
+        "value": [
+            labelled("consideration", "contract value", "sum of", pattern=r"[\d,]+(?:\.\d{2})?")
+        ],
         "governing_law": [labelled("governing law", "governed by")],
     },
 }
@@ -246,9 +292,14 @@ def extract_field(
         note = (note + "; " if note else "") + "value does not match the expected format"
 
     return ExtractedField(
-        name=name, value=value, confidence=confidence, candidates=candidates,
-        agreement=round(agreement, 4), format_ok=format_ok,
-        method_count=contributing, note=note,
+        name=name,
+        value=value,
+        confidence=confidence,
+        candidates=candidates,
+        agreement=round(agreement, 4),
+        format_ok=format_ok,
+        method_count=contributing,
+        note=note,
     )
 
 
@@ -257,7 +308,4 @@ def extract_document(text: str, document_type: str) -> dict[str, ExtractedField]
     extractors = FIELD_EXTRACTORS.get(document_type, {})
     if schema is None:
         return {}
-    return {
-        name: extract_field(text, name, fns, schema)
-        for name, fns in extractors.items()
-    }
+    return {name: extract_field(text, name, fns, schema) for name, fns in extractors.items()}

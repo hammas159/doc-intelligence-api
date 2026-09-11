@@ -31,7 +31,7 @@ from decimal import Decimal, InvalidOperation
 # Pakistani identifiers, because a document-processing system built elsewhere will not
 # know them and they appear on every invoice and contract here.
 CNIC = re.compile(r"^\d{5}-\d{7}-\d$")
-NTN = re.compile(r"^\d{7}(-\d)?$")          # National Tax Number
+NTN = re.compile(r"^\d{7}(-\d)?$")  # National Tax Number
 STRN = re.compile(r"^\d{2}-\d{2}-\d{4}-\d{3}-\d{2}$")  # Sales Tax Registration
 IBAN_PK = re.compile(r"^PK\d{2}[A-Z]{4}\d{16}$")
 PHONE_PK = re.compile(r"^(?:\+92|0)3\d{2}-?\d{7}$")
@@ -62,9 +62,9 @@ class FieldSpec:
 @dataclass
 class Issue:
     field: str
-    kind: str            # "missing" | "type" | "format" | "cross_field"
+    kind: str  # "missing" | "type" | "format" | "cross_field"
     detail: str
-    severity: str        # "error" | "warning"
+    severity: str  # "error" | "warning"
 
 
 # Matches the first number in a string, with optional thousands separators and decimals.
@@ -102,8 +102,15 @@ def parse_date(raw: str) -> dt.date | None:
     if not raw:
         return None
     text = str(raw).strip()
-    for pattern in ("%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%Y-%m-%d",
-                    "%d %B %Y", "%d %b %Y", "%B %d, %Y"):
+    for pattern in (
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%d.%m.%Y",
+        "%Y-%m-%d",
+        "%d %B %Y",
+        "%d %b %Y",
+        "%B %d, %Y",
+    ):
         try:
             return dt.datetime.strptime(text, pattern).date()
         except ValueError:
@@ -123,8 +130,14 @@ _FORMATS: dict[str, tuple[re.Pattern, str]] = {
 def validate_field(spec: FieldSpec, value) -> list[Issue]:
     if value is None or (isinstance(value, str) and not value.strip()):
         if spec.required:
-            return [Issue(spec.name, "missing", "required field not found",
-                          "error" if spec.critical else "warning")]
+            return [
+                Issue(
+                    spec.name,
+                    "missing",
+                    "required field not found",
+                    "error" if spec.critical else "warning",
+                )
+            ]
         return []
 
     severity = "error" if spec.critical else "warning"
@@ -136,8 +149,7 @@ def validate_field(spec: FieldSpec, value) -> list[Issue]:
 
     if spec.type == FieldType.DATE:
         if parse_date(value) is None:
-            return [Issue(spec.name, "type", f"{value!r} is not a recognised date",
-                          severity)]
+            return [Issue(spec.name, "type", f"{value!r} is not a recognised date", severity)]
         return []
 
     if spec.type in _FORMATS:
@@ -165,16 +177,17 @@ def line_items_sum_to_subtotal(tolerance: Decimal = Decimal("0.01")) -> CrossFie
         subtotal = parse_money(fields.get("subtotal"))
         if not items or subtotal is None:
             return []
-        total = sum(
-            (parse_money(i.get("amount")) or Decimal(0)) for i in items
-        )
+        total = sum((parse_money(i.get("amount")) or Decimal(0)) for i in items)
         if abs(total - subtotal) > tolerance:
-            return [Issue(
-                "subtotal", "cross_field",
-                f"line items sum to {total} but subtotal states {subtotal} "
-                f"(difference {total - subtotal})",
-                "error",
-            )]
+            return [
+                Issue(
+                    "subtotal",
+                    "cross_field",
+                    f"line items sum to {total} but subtotal states {subtotal} "
+                    f"(difference {total - subtotal})",
+                    "error",
+                )
+            ]
         return []
 
     return rule
@@ -192,12 +205,15 @@ def totals_are_consistent(tolerance: Decimal = Decimal("0.01")) -> CrossFieldRul
             return []
         expected = subtotal + tax - discount
         if abs(expected - total) > tolerance:
-            return [Issue(
-                "total", "cross_field",
-                f"subtotal {subtotal} + tax {tax} - discount {discount} = {expected}, "
-                f"but total states {total}",
-                "error",
-            )]
+            return [
+                Issue(
+                    "total",
+                    "cross_field",
+                    f"subtotal {subtotal} + tax {tax} - discount {discount} = {expected}, "
+                    f"but total states {total}",
+                    "error",
+                )
+            ]
         return []
 
     return rule
@@ -211,15 +227,15 @@ def date_order(earlier: str, later: str) -> CrossFieldRule:
         if a is None or b is None:
             return []
         if b < a:
-            return [Issue(later, "cross_field",
-                          f"{later} ({b}) precedes {earlier} ({a})", "error")]
+            return [Issue(later, "cross_field", f"{later} ({b}) precedes {earlier} ({a})", "error")]
         return []
 
     return rule
 
 
-def tax_rate_is_plausible(rates: Sequence[Decimal] = (Decimal("0"), Decimal("0.17"),
-                                                      Decimal("0.18"))) -> CrossFieldRule:
+def tax_rate_is_plausible(
+    rates: Sequence[Decimal] = (Decimal("0"), Decimal("0.17"), Decimal("0.18")),
+) -> CrossFieldRule:
     """Sales tax in Pakistan sits at a small set of statutory rates.
 
     An implied rate of 1.7% or 170% is a decimal point in the wrong place — which is the
@@ -234,9 +250,14 @@ def tax_rate_is_plausible(rates: Sequence[Decimal] = (Decimal("0"), Decimal("0.1
         implied = tax / subtotal
         if any(abs(implied - r) < Decimal("0.005") for r in rates):
             return []
-        return [Issue("tax", "cross_field",
-                      f"implied tax rate {implied:.1%} is not a standard rate",
-                      "warning")]
+        return [
+            Issue(
+                "tax",
+                "cross_field",
+                f"implied tax rate {implied:.1%} is not a standard rate",
+                "warning",
+            )
+        ]
 
     return rule
 

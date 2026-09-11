@@ -113,19 +113,24 @@ def route(
 ) -> ProcessedDocument:
     policy = policy or ReviewPolicy()
     document = ProcessedDocument(
-        document_type=classification.document_type, classification=classification,
-        fields=fields, issues=issues,
+        document_type=classification.document_type,
+        classification=classification,
+        fields=fields,
+        issues=issues,
     )
 
     if classification.needs_human:
         # Nothing downstream can be trusted if the document type is wrong, so this
         # escalates whole rather than per field.
-        document.review_queue.append(ReviewItem(
-            field="document_type", reason=classification.reason,
-            extracted_value=None,
-            candidates=[c for c in (classification.runner_up,) if c],
-            critical=True,
-        ))
+        document.review_queue.append(
+            ReviewItem(
+                field="document_type",
+                reason=classification.reason,
+                extracted_value=None,
+                candidates=[c for c in (classification.runner_up,) if c],
+                critical=True,
+            )
+        )
         return document
 
     issues_by_field: dict[str, list[Issue]] = {}
@@ -135,9 +140,7 @@ def route(
     for name, extracted in fields.items():
         spec = schema.spec(name)
         critical = bool(spec and spec.critical)
-        threshold = (
-            policy.min_confidence_critical if critical else policy.min_confidence
-        )
+        threshold = policy.min_confidence_critical if critical else policy.min_confidence
         field_issues = issues_by_field.get(name, [])
         errors = [i for i in field_issues if i.severity == "error"]
 
@@ -145,9 +148,7 @@ def route(
         if extracted.value is None and spec and spec.required:
             reasons.append("required field not found")
         if extracted.value is not None and extracted.confidence < threshold:
-            reasons.append(
-                f"confidence {extracted.confidence:.2f} below {threshold:.2f}"
-            )
+            reasons.append(f"confidence {extracted.confidence:.2f} below {threshold:.2f}")
         if policy.escalate_on_disagreement and extracted.disputed:
             reasons.append("extractors disagreed")
         if policy.escalate_on_validation_error and errors:
@@ -156,21 +157,31 @@ def route(
             reasons.append(errors[0].detail)
 
         if reasons:
-            document.review_queue.append(ReviewItem(
-                field=name, reason="; ".join(reasons),
-                extracted_value=extracted.value, candidates=extracted.candidates,
-                confidence=extracted.confidence, critical=critical,
-                validation=[i.detail for i in field_issues],
-            ))
+            document.review_queue.append(
+                ReviewItem(
+                    field=name,
+                    reason="; ".join(reasons),
+                    extracted_value=extracted.value,
+                    candidates=extracted.candidates,
+                    confidence=extracted.confidence,
+                    critical=critical,
+                    validation=[i.detail for i in field_issues],
+                )
+            )
 
     # Document-level errors that belong to no extracted field - cross-field rules
     # naming a field that was never extracted, for instance.
     for issue in issues:
         if issue.severity == "error" and issue.field not in fields:
-            document.review_queue.append(ReviewItem(
-                field=issue.field, reason=issue.detail, extracted_value=None,
-                critical=True, validation=[issue.detail],
-            ))
+            document.review_queue.append(
+                ReviewItem(
+                    field=issue.field,
+                    reason=issue.detail,
+                    extracted_value=None,
+                    critical=True,
+                    validation=[issue.detail],
+                )
+            )
 
     document.auto_approved = not document.review_queue
     return document
@@ -209,7 +220,5 @@ class QueueMetrics:
             "critical_items": self.critical_items,
             # Which field is costing the most human time. Usually one field accounts
             # for most of the queue, and fixing that one extractor is the whole win.
-            "worst_fields": dict(
-                sorted(self.by_field.items(), key=lambda kv: -kv[1])[:5]
-            ),
+            "worst_fields": dict(sorted(self.by_field.items(), key=lambda kv: -kv[1])[:5]),
         }

@@ -8,8 +8,11 @@ from .schema import SCHEMAS
 
 
 def process(
-    text: str, *, policy: ReviewPolicy | None = None,
-    document_type: str | None = None, line_items: list[dict] | None = None,
+    text: str,
+    *,
+    policy: ReviewPolicy | None = None,
+    document_type: str | None = None,
+    line_items: list[dict] | None = None,
 ) -> ProcessedDocument:
     """Process one document.
 
@@ -31,7 +34,8 @@ def process(
         from .extract import Classification
 
         unknown = Classification(
-            None, classification.confidence,
+            None,
+            classification.confidence,
             reason=f"no schema for document type {classification.document_type!r}",
         )
         return route(unknown, {}, [], SCHEMAS["invoice"], policy=policy)

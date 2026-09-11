@@ -43,8 +43,12 @@ ITEMS = [{"amount": "12000"}, {"amount": "8500"}, {"amount": "3200"}]
 class TestParsing:
     @pytest.mark.parametrize(
         ("raw", "expected"),
-        [("23,700.00", Decimal("23700.00")), ("PKR 1,500", Decimal("1500")),
-         ("Rs. 99.50", Decimal("99.50")), ("1500", Decimal("1500"))],
+        [
+            ("23,700.00", Decimal("23700.00")),
+            ("PKR 1,500", Decimal("1500")),
+            ("Rs. 99.50", Decimal("99.50")),
+            ("1500", Decimal("1500")),
+        ],
     )
     def test_money_tolerates_scanned_formats(self, raw, expected):
         assert parse_money(raw) == expected
@@ -99,8 +103,7 @@ class TestCrossFieldValidation:
     def test_line_items_must_sum_to_the_subtotal(self):
         """The single most valuable check: catches a dropped line, a misread digit and
         a fabricated total, none of which per-character confidence can see."""
-        values = {"subtotal": "23,700.00", "line_items": [{"amount": "12000"},
-                                                          {"amount": "8500"}]}
+        values = {"subtotal": "23,700.00", "line_items": [{"amount": "12000"}, {"amount": "8500"}]}
         issues = INVOICE.validate(values)
         assert any(i.kind == "cross_field" and i.field == "subtotal" for i in issues)
 
@@ -110,8 +113,7 @@ class TestCrossFieldValidation:
 
     def test_totals_must_be_arithmetically_consistent(self):
         values = {"subtotal": "23700", "tax": "4029", "total": "99999"}
-        assert any(i.field == "total" and i.kind == "cross_field"
-                   for i in INVOICE.validate(values))
+        assert any(i.field == "total" and i.kind == "cross_field" for i in INVOICE.validate(values))
 
     def test_a_due_date_before_its_invoice_date_is_an_error(self):
         """A misread year, every time."""
@@ -220,7 +222,8 @@ class TestRouting:
         """An invoice whose line items do not sum to its total is wrong even if every
         character was read perfectly."""
         document = process(
-            INVOICE_TEXT, line_items=ITEMS[:2],
+            INVOICE_TEXT,
+            line_items=ITEMS[:2],
             policy=ReviewPolicy(min_confidence=0.0, min_confidence_critical=0.0),
         )
         assert not document.auto_approved
@@ -238,9 +241,12 @@ class TestRouting:
 
     def test_a_lenient_policy_approves_more(self):
         broken = INVOICE_TEXT.replace("NTN: 1234567", "NTN: 12")
-        lenient = ReviewPolicy(min_confidence=0.0, min_confidence_critical=0.0,
-                               escalate_on_validation_error=False,
-                               escalate_on_disagreement=False)
+        lenient = ReviewPolicy(
+            min_confidence=0.0,
+            min_confidence_critical=0.0,
+            escalate_on_validation_error=False,
+            escalate_on_disagreement=False,
+        )
         assert process(broken, line_items=ITEMS, policy=lenient).auto_approved
 
 
