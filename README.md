@@ -152,3 +152,54 @@ and fixing that one extractor is the entire win.
 ## License
 
 MIT
+
+---
+
+## Run it yourself
+
+```bash
+git clone https://github.com/hammas159/doc-intelligence-api
+cd doc-intelligence-api
+
+pip install -e .         # zero dependencies to resolve
+pytest -q                # 44 tests, no OCR engine, no documents
+```
+
+```python
+from docintel import process, ReviewPolicy, QueueMetrics
+
+document = process(invoice_text, line_items=extracted_table_rows)
+
+document.auto_approved                  # True -> straight through, no human
+document.values                         # {"invoice_number": "INV-2026-0148", ...}
+document.summary()["questions"]         # one precise question per uncertain field
+
+metrics = QueueMetrics()
+metrics.add(document)
+metrics.summary()["worst_fields"]       # which extractor to fix first
+```
+
+This takes **text**, not images — Tesseract or a cloud OCR produces it, and line items
+are supplied separately because table extraction is a different problem.
+
+## Problems hit while building this
+
+**An invoice's total was silently extracted as its subtotal.** The label pattern `total`
+matched inside the word **Sub*total*** on the line above, so a clean invoice reported
+`total = 23,700.00` when the document plainly said `27,729.00`.
+
+This is the worst shape a bug can take in document processing: a wrong number that is
+the *right shape*, in the *right field*, taken from a *real line* of the document.
+Nothing downstream can detect it — no confidence score, no schema check, no type
+validation. *Fixed* with a leading word boundary, and longest-label-first matching so
+`invoice date` beats `invoice no` on a line containing both.
+
+**`Rs. 99.50` failed to parse.** Stripping every non-digit character kept the full stop
+in `Rs.`, producing `..99.50`, which then failed as a decimal — and amounts are written
+that way on most invoices here, so it is not an edge case. *Fixed* by **matching** the
+number with a regex rather than stripping down to it.
+
+**Routing was per document before it was per field.** Rejecting a forty-field invoice
+because one field was uncertain sends a human forty fields to re-key when they needed to
+check one — which is the difference between a system that saves money and one that costs
+more than the manual process it replaced.
