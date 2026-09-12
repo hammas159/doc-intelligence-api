@@ -1,4 +1,4 @@
-# doc-intelligence-api
+# doc-intelligence-api (FastAPI, Pydantic)
 
 [![ci](https://github.com/hammas159/doc-intelligence-api/actions/workflows/ci.yml/badge.svg)](https://github.com/hammas159/doc-intelligence-api/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
