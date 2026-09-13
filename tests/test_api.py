@@ -8,6 +8,9 @@ from pathlib import Path
 import pytest
 
 pytest.importorskip("fastapi")
+# starlette's TestClient refuses to import without this; skip rather than error so a
+# local run with only the `api` extra installed still collects the rest of the suite.
+pytest.importorskip("httpx2")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
