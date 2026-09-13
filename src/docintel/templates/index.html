@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>doc-intelligence-api demo</title>
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+    h1 { font-size: 1.3rem; margin-bottom: 0.2rem; }
+    .sub { color: #666; margin-top: 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 1rem 1.2rem; background: #fafafa; }
+    .card h2 { font-size: 1rem; margin-top: 0; }
+    textarea { width: 100%; height: 180px; font-family: ui-monospace, monospace; font-size: 0.85rem; }
+    select, button { padding: 0.4rem 0.7rem; margin-top: 0.5rem; }
+    button { cursor: pointer; background: #2563eb; color: white; border: none; border-radius: 6px; }
+    button:hover { background: #1d4ed8; }
+    .metric { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid #eee; }
+    .metric:last-child { border-bottom: none; }
+    .bar-row { display: flex; align-items: center; gap: 0.5rem; margin: 0.3rem 0; }
+    .bar-label { width: 110px; font-size: 0.8rem; text-align: right; }
+    .bar-track { flex: 1; background: #e5e7eb; border-radius: 4px; height: 14px; overflow: hidden; }
+    .bar-fill { height: 100%; background: #2563eb; }
+    .bar-fill.warn { background: #f59e0b; }
+    .bar-value { width: 35px; font-size: 0.8rem; }
+    .approved { color: #16a34a; font-weight: bold; }
+    .needs-review { color: #dc2626; font-weight: bold; }
+    .review-item { padding: 0.5rem; border-left: 3px solid #f59e0b; background: #fffbeb; margin: 0.4rem 0; font-size: 0.9rem; }
+    .review-item.critical { border-left-color: #dc2626; background: #fef2f2; }
+    pre { white-space: pre-wrap; font-size: 0.85rem; background: #f3f4f6; padding: 0.6rem; border-radius: 6px; }
+    .history-row { font-size: 0.8rem; padding: 0.25rem 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <h1>doc-intelligence-api</h1>
+  <p class="sub">Classify &rarr; extract &rarr; validate &rarr; route to per-field human review. Local demo, no OCR, no cloud call.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Process a document</h2>
+      <form method="post" action="/process">
+        <select name="sample_key" onchange="document.getElementById('txt').value = this.options[this.selectedIndex].dataset.text || '';">
+          <option value="">-- pick a sample or paste your own --</option>
+          {% for key, text in samples.items() %}
+            <option value="{{ key }}" data-text="{{ text }}">{{ key }}</option>
+          {% endfor %}
+        </select>
+        <textarea id="txt" name="text" placeholder="Paste document text here...">{{ submitted_text or '' }}</textarea>
+        <button type="submit">Process</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Fleet dashboard (this session)</h2>
+      <div class="metric"><span>Documents processed</span><strong>{{ metrics.documents }}</strong></div>
+      <div class="metric"><span>Straight-through rate</span><strong>{{ (metrics.straight_through_rate * 100) | round(1) }}%</strong></div>
+      <div class="metric"><span>Review items / document</span><strong>{{ metrics.items_per_document }}</strong></div>
+      <div class="metric"><span>Critical items</span><strong>{{ metrics.critical_items }}</strong></div>
+
+      {% if metrics.worst_fields %}
+      <h2 style="margin-top:1rem;">Worst fields (queue volume)</h2>
+      {% set max_val = metrics.worst_fields.values() | max %}
+      {% for field, count in metrics.worst_fields.items() %}
+        <div class="bar-row">
+          <span class="bar-label">{{ field }}</span>
+          <span class="bar-track"><span class="bar-fill warn" style="width: {{ (count / max_val * 100) | round(0) }}%"></span></span>
+          <span class="bar-value">{{ count }}</span>
+        </div>
+      {% endfor %}
+      {% else %}
+        <p style="color:#999; font-size:0.85rem;">Process a document to populate this.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if result %}
+  <div class="card" style="margin-top:1.5rem;">
+    <h2>Result &mdash;
+      {% if result.auto_approved %}<span class="approved">straight-through, no human needed</span>
+      {% else %}<span class="needs-review">{{ result.review_queue | length }} field(s) need review</span>{% endif %}
+    </h2>
+    <p><strong>Document type:</strong> {{ result.summary.document_type or "unclassified" }}
+       &nbsp;|&nbsp; <strong>Fields extracted:</strong> {{ result.summary.fields_extracted }}
+       &nbsp;|&nbsp; <strong>Errors:</strong> {{ result.summary.errors }}
+       &nbsp;|&nbsp; <strong>Warnings:</strong> {{ result.summary.warnings }}</p>
+
+    {% if result.review_queue %}
+      {% for item in result.review_queue %}
+        <div class="review-item {{ 'critical' if item.critical else '' }}">
+          <strong>{{ item.field }}</strong>{% if item.critical %} (critical){% endif %}
+          &mdash; {{ item.question }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <h2 style="margin-top:1rem;">Extracted values</h2>
+    <pre>{{ result.values }}</pre>
+  </div>
+  {% endif %}
+
+  {% if history %}
+  <div class="card" style="margin-top:1.5rem;">
+    <h2>Recent documents (this session)</h2>
+    {% for h in history %}
+      <div class="history-row">
+        <span>{{ h.document_type or "unclassified" }}</span>
+        <span>{{ "approved" if h.auto_approved else (h.fields_for_review ~ " field(s) flagged") }}</span>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</body>
+</html>

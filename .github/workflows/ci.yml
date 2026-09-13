@@ -19,5 +19,5 @@ jobs:
       - run: pip install pytest ruff
       - run: ruff check src tests
       - run: ruff format --check src tests
-      - run: pip install -e .
+      - run: pip install -e ".[api]"
       - run: pytest -q

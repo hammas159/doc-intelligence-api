@@ -182,7 +182,34 @@ metrics.summary()["worst_fields"]       # which extractor to fix first
 This takes **text**, not images — Tesseract or a cloud OCR produces it, and line items
 are supplied separately because table extraction is a different problem.
 
+### The demo dashboard (`api` extra)
+
+`pyproject.toml` declared a FastAPI `api` extra from the start; this is the actual demo
+that extra was for. Paste or pick a sample document, see it classified, extracted,
+validated, and either auto-approved or routed to a human with a specific question per
+field — plus a running dashboard (straight-through rate, worst fields by queue volume)
+that accumulates across everything processed in the session.
+
+```bash
+pip install -e ".[api]"
+uvicorn docintel.api:app --reload --app-dir src
+# open http://127.0.0.1:8000
+```
+
+Local only, in-memory metrics — this is a demo of the library above, not a deployed
+service.
+
 ## Problems hit while building this
+
+**The demo dashboard silently 500'd on every page load, until it didn't silently do
+anything — it hard-crashed with `TypeError: unhashable type: 'dict'`.** The installed
+`starlette` (1.6.0) changed `Jinja2Templates.TemplateResponse` from the old two-argument
+form `TemplateResponse(name, context)` to a `request`-first
+`TemplateResponse(request, name, context)`. Calling it the old way doesn't warn or
+deprecate — it silently binds `request="index.html"` and `name=<the context dict>`, and
+the crash only surfaces two calls later, inside Jinja2's template cache, when it tries to
+use that dict as part of a cache key. *Fixed* by passing `request` as the first
+positional argument everywhere `TemplateResponse` is called.
 
 **An invoice's total was silently extracted as its subtotal.** The label pattern `total`
 matched inside the word **Sub*total*** on the line above, so a clean invoice reported

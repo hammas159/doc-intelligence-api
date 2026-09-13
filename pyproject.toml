@@ -9,7 +9,7 @@ keywords = ["idp", "document-processing", "ocr", "invoice", "pakistan"]
 dependencies = []
 
 [project.optional-dependencies]
-api = ["fastapi>=0.115", "uvicorn[standard]>=0.32", "pydantic>=2.9"]
+api = ["fastapi>=0.115", "uvicorn[standard]>=0.32", "pydantic>=2.9", "jinja2>=3.1", "python-multipart>=0.0.9"]
 
 [dependency-groups]
 dev = ["pytest>=8.3", "ruff>=0.8"]
