@@ -1,18 +1,44 @@
-# doc-intelligence-api (FastAPI, Pydantic)
+<h1 align="center">doc-intelligence-api</h1>
+<p align="center"><i>Document processing that sends a human one question, not one document</i></p>
 
-[![ci](https://github.com/hammas159/doc-intelligence-api/actions/workflows/ci.yml/badge.svg)](https://github.com/hammas159/doc-intelligence-api/actions/workflows/ci.yml)
-![python](https://img.shields.io/badge/python-3.10%2B-blue)
-![dependencies](https://img.shields.io/badge/dependencies-none-success)
-![license](https://img.shields.io/badge/license-MIT-green)
+<p align="center">
+  <a href="#two-ideas-that-decide-whether-idp-is-worth-deploying">Two ideas</a> &middot;
+  <a href="#confidence-that-means-something">Confidence</a> &middot;
+  <a href="#pakistani-formats-because-most-idp-tools-dont-know-them">Pakistani formats</a> &middot;
+  <a href="#the-metric-the-business-case-rests-on">The metric</a> &middot;
+  <a href="#usage">Usage</a> &middot;
+  <a href="#problems-hit-while-building-this">Problems hit</a>
+</p>
 
-**Document processing that sends a human one question, not one document.**
-
-Classify → extract → validate the arithmetic → route only the uncertain fields.
-Zero dependencies.
+<p align="center">
+  <a href="https://github.com/hammas159/doc-intelligence-api/actions/workflows/ci.yml"><img src="https://github.com/hammas159/doc-intelligence-api/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
+  <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="python">
+  <img src="https://img.shields.io/badge/core%20deps-zero-success" alt="deps">
+  <img src="https://img.shields.io/badge/stack-FastAPI%20%C2%B7%20Pydantic-orange" alt="stack">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="license"></a>
+</p>
 
 ---
 
 ## Two ideas that decide whether IDP is worth deploying
+
+```mermaid
+flowchart LR
+    D["document"] --> C["classify"]
+    C --> E["extract fields"]
+    E --> V["validate the arithmetic<br/>do the totals add up?"]
+    V --> Q{"which fields<br/>are uncertain?"}
+    Q -->|"none"| A["auto-process"]
+    Q -->|"some"| F["route ONLY those fields<br/>to a human"]
+
+    style A fill:#16a34a,color:#fff
+    style F fill:#f59e0b,color:#fff
+```
+
+The difference that decides whether IDP is worth deploying: a human reviews **one field**,
+not one document. Validating the arithmetic is what makes per-field confidence mean
+something.
+
 
 ### 1. Validation catches what confidence never will
 
@@ -148,6 +174,10 @@ and fixing that one extractor is the entire win.
 - Confidence is a routing score, not a calibrated probability, and is deliberately not
   presented as one.
 - Three schemas ship (invoice, contract, CNIC). Adding one is a `DocumentSchema`.
+
+## Keywords
+
+intelligent document processing &middot; IDP &middot; document AI &middot; OCR &middot; information extraction &middot; invoice processing &middot; field extraction &middot; confidence calibration &middot; human in the loop &middot; straight-through processing &middot; FastAPI &middot; Pydantic &middot; Pakistani document formats &middot; CNIC &middot; document classification
 
 ## License
 
