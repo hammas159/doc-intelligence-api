@@ -5,6 +5,7 @@
 The point is not how many fields were extracted. It is how few a human is
 asked to look at, and whether the right ones were picked. No network, no OCR.
 """
+
 import sys
 
 sys.path.insert(0, "src")
@@ -25,11 +26,10 @@ for key, note in DOCS:
 print()
 
 print("OUTPUT")
-for key, note in DOCS:
+for key, _note in DOCS:
     doc = process(SAMPLE_DOCUMENTS[key])
     route = "STRAIGHT THROUGH" if doc.straight_through else "NEEDS A HUMAN"
-    print(f"   {key:22} type={doc.document_type or '?':10} "
-          f"fields={len(doc.fields):<3} {route}")
+    print(f"   {key:22} type={doc.document_type or '?':10} fields={len(doc.fields):<3} {route}")
     for item in doc.review_queue:
         print(f"      ask a human   {item.field}: {item.reason}")
     for issue in doc.issues:
