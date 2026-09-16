@@ -149,6 +149,27 @@ QueueMetrics().summary()
 `worst_fields` is the useful one. Usually a single field accounts for most of the queue,
 and fixing that one extractor is the entire win.
 
+---
+
+## Input
+
+![input](docs/images/input.png)
+
+## Output
+
+`python demo.py`
+
+![output](docs/images/output.png)
+
+*Every field in the broken invoice is present, legible and extracted with high
+confidence. Field-level OCR confidence would pass all eleven. What fails is that
+12,000 + 2,040 is not 27,300 — a cross-field check, not a vision one.*
+
+*That is the whole argument for arithmetic validation: the errors that matter most in
+finance documents are the ones where the characters were read perfectly.*
+
+---
+
 ## Tests
 
 **44 tests. No dependencies, no OCR engine, no documents.**
