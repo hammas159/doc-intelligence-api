@@ -1,4 +1,4 @@
-<h1 align="center">doc-intelligence-api</h1>
+<h1 align="center">doc-intelligence-api (FastAPI · Pydantic · Jinja2)</h1>
 <p align="center"><i>Document processing that sends a human one question, not one document</i></p>
 
 <p align="center">
